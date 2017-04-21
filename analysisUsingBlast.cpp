@@ -43,7 +43,8 @@ int main(int argc, char** argv)
     
     AlignVec alignData;
     AlignVec resultData;
-    
+    int totalAlignContig = 0;
+	
     ifstream inputFile( command.c_str() );
     
     if(!inputFile.is_open())
@@ -73,7 +74,7 @@ int main(int argc, char** argv)
                   << queryEnd   << "\t" 
                   << refStart   << "\t"
                   << refEnd     << "\n";
-        */    
+         */ 
         /*
         std::cout<< queryName  << "\t"
                  << refName    << "\t"
@@ -89,7 +90,7 @@ int main(int argc, char** argv)
                  << unknown3   << "\t"
                  << "\n";
         */
-        if( pValue != 0 )continue;
+        if( pValue != 0 || alignLen < 300 )continue;
         
         if( alignData.size() == 0 )
         {
@@ -213,7 +214,8 @@ int main(int argc, char** argv)
     
     int misassembled = 0;
 	int continueMisassembled = 0;
-    
+    int misassembledContig = 0;
+	
     // filter duplicate
     for(AlignVec::iterator iter = alignData.begin() ; iter != alignData.end() ; ++iter)
     {
@@ -310,7 +312,9 @@ int main(int argc, char** argv)
     int alignLength[100000];
     int alignPoint = 0;
     size_t totalLength = 0;
-
+	
+	totalAlignContig = resultData.size();
+	
     for(AlignVec::iterator iter = resultData.begin() ; iter != resultData.end() ; ++iter)
     {
         vector<int>::iterator alnter  = (*iter).alignLenVec.begin(); // record align length
@@ -354,6 +358,7 @@ int main(int argc, char** argv)
         int startPacbioPosition = 0;
         int referenceAccumulationLen = 0;
 		int continueMisassembled = 0;
+		bool misassembledContigStatus = false;
 		
         for(int i = 0 ; i < (*iter).PBVec.size() ; i++ )
         {
@@ -408,10 +413,13 @@ int main(int argc, char** argv)
                 referenceAccumulationLen = abs( positionArray[i][2] - positionArray[i][3] );
                 
                 alignPoint++;
-                
+				
+                //prevent miniasm contig blast result, it exist many local align 
 				if( continueMisassembled == 0 ) misassembled++;
 				
 				continueMisassembled = 3;
+				
+				misassembledContigStatus = true;
 				
 				//cout << misassembled << "\t" << "\t" << "\n";
 				
@@ -419,8 +427,8 @@ int main(int argc, char** argv)
 
         }
         
-        //prevent miniasm contig blast result, it exist many local align 
-
+        
+		if( misassembledContigStatus ) misassembledContig++;
         
         //cout << referenceAccumulationLen << "\t" << misassembled << "\t" << "\n\n";
         alignLength[alignPoint] = referenceAccumulationLen;
@@ -455,7 +463,7 @@ int main(int argc, char** argv)
         totalLength -= alignLength[i];
     }
     
-    cout << misassembled << "\t" << "\n";
+    cout << totalAlignContig << "\t" << misassembled << "\t" << misassembledContig << "\n";
      
     return 0;
 }

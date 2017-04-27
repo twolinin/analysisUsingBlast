@@ -144,7 +144,8 @@ int main(int argc, char** argv)
                         if( (*posIter).first >= queryStart && (*posIter).second >= queryEnd  && queryEnd >= (*posIter).first )
                         {
                             if( (float)(queryEnd - (*posIter).first) / (float)(queryEnd - queryStart + 1) > 0.7 ) contain = true;
-                            if( (*posIter).first - queryStart <= 1000 )
+                            // unique length
+							if( (*posIter).first - queryStart <= 1000 )
                             {
                                 contain = true;
                                 break;
@@ -155,7 +156,8 @@ int main(int argc, char** argv)
                         if( (*posIter).first <= queryStart && (*posIter).second <= queryEnd && (*posIter).second >= queryStart)
                         {
                             if( (float)((*posIter).second - queryStart) / (float)(queryEnd - queryStart + 1) > 0.7 ) contain = true;
-                            if( queryEnd - (*posIter).second <= 1000 )
+                            // unique length
+							if( queryEnd - (*posIter).second <= 1000 )
                             {
                                 contain = true;
                                 break;
@@ -163,7 +165,7 @@ int main(int argc, char** argv)
                         }
                     }
                     
-                    if( !contain && alignLen >= 500 )
+                    if( !contain && alignLen >= 1000 )
                     {
                         (*iter).alignLenVec.push_back(alignLen);
                         (*iter).PBVec.push_back(make_pair(queryStart,queryEnd));
@@ -309,14 +311,13 @@ int main(int argc, char** argv)
         }
     }
     
-    int deviation = 1000;
     int alignLength[100000];
     int alignPoint = 0;
     size_t totalLength = 0;
 	
 	totalAlignContig = resultData.size();
 	
-	bool showDebug = false;
+	bool showDebug = true;
 	
     for(AlignVec::iterator iter = resultData.begin() ; iter != resultData.end() ; ++iter)
     {

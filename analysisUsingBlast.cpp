@@ -92,7 +92,7 @@ int main(int argc, char** argv)
 					 << unknown3   << "\t"
 					 << "\n";
         */
-        if( alignLen < 300 )continue;
+        if( alignLen < 1000 )continue;
         
         if( alignData.size() == 0 )
         {
@@ -241,15 +241,14 @@ int main(int argc, char** argv)
         
         bitArray = new bool[max];
         
-        for( int i = 0 ; i < max ; i++ ) 
-            bitArray[i] = false;
+        for( int i = 0 ; i < max ; i++ ) bitArray[i] = false;
         
         for(RangeVec::iterator posIter = (*iter).PBVec.begin() ; posIter != (*iter).PBVec.end() ; ++posIter)
         {
-			int overlap = 0;
+			int overlap   = 0;
             int noOverlap = 0;
-            bool filter = false;
-            
+            bool filter   = true;
+
             for( int i = (*posIter).first ; i < (*posIter).second ; i++ )
             {
                 if( !bitArray[i] )
@@ -260,9 +259,12 @@ int main(int argc, char** argv)
                 else overlap++;
             }
 			
-            if( overlap == 0 ) 
-            {
-                if(!insert)
+			if( overlap == 0 ) filter = false;
+			else if( (float)noOverlap / (float)(overlap + noOverlap ) > 0.5  || noOverlap > 5000 ) filter = false;
+			
+			if( !filter )
+			{
+				if(!insert)
                 {
                     alignInfo tmp;
                     tmp.contig = (*iter).contig;
@@ -283,31 +285,7 @@ int main(int argc, char** argv)
                     ++refIter;
                     
                 }
-            }
-            else if( (float)noOverlap / (float)(overlap + noOverlap ) > 0.5  || noOverlap > 5000 )
-            {
-                if(!insert)
-                {
-                    alignInfo tmp;
-                    tmp.contig = (*iter).contig;
-                    tmp.alignLenVec.push_back((*alignIter));
-                    tmp.PBVec.push_back(make_pair((*posIter).first,(*posIter).second));
-                    tmp.refVec.push_back(make_pair((*refIter).first,(*refIter).second));
-                    resultData.push_back(tmp);
-                    ++refIter;
-                    insert = true;
-
-                }
-                else
-                {
-                    AlignVec::iterator tmp = resultData.end();
-                    --tmp;
-                    (*tmp).alignLenVec.push_back((*alignIter));
-                    (*tmp).PBVec.push_back(make_pair((*posIter).first,(*posIter).second));
-                    (*tmp).refVec.push_back(make_pair((*refIter).first,(*refIter).second));
-                    ++refIter;
-                }
-            }
+			}
         }
     }
     
@@ -331,10 +309,8 @@ int main(int argc, char** argv)
             /*
 			if(showDebug)
 				cout<< (*iter).contig       << "\t"
-					<< (*firPBIter).first   << "\t" 
-					<< (*firPBIter).second  << "\t" 
-					<< (*firRefIter).first  << "\t" 
-					<< (*firRefIter).second << "\t" ;
+					<< (*firPBIter).first   << "\t"  << (*firPBIter).second  << "\t" 
+					<< (*firRefIter).first  << "\t"  << (*firRefIter).second << "\t" ;
             */
             alignLength[alignPoint] = (*alnter);
             totalLength += alignLength[alignPoint];
@@ -358,10 +334,6 @@ int main(int argc, char** argv)
 
         qsort(positionArray,(*iter).PBVec.size(),sizeof(positionArray[0]),Cmp);
         
-        //1       25949   739574  765566
-        //29479   67738   768163  806592
-        //67736   114370  800893  847667
-        //
         int startPacbioPosition = 0;
         int referenceAccumulationLen = 0;
 		int continueMisassembled = 0;
@@ -371,10 +343,8 @@ int main(int argc, char** argv)
         {
             if(showDebug)
 				std::cout << (*iter).contig      << "\t"
-						  << positionArray[i][0] << "\t"
-						  << positionArray[i][1] << "\t"
-						  << positionArray[i][2] << "\t"
-						  << positionArray[i][3] << "\t"
+						  << positionArray[i][0] << "\t" << positionArray[i][1] << "\t"
+						  << positionArray[i][2] << "\t" << positionArray[i][3] << "\t"
 						  << "\t";
             
             if( i == 0 )
@@ -395,16 +365,51 @@ int main(int argc, char** argv)
             float dissimilar = (float)((int)( abs( 1 - (float)pbLen/(float)refLen )*1000 ))/1000;
             bool  beforeDir  = positionArray[i-1][2] > positionArray[i-1][3];
             bool  nowDir     = positionArray[i][2]   > positionArray[i][3];
-            bool  connect    = ( positionArray[i-1][3] < 10 || positionArray[i][2] < 10 ) || 
-							   ( abs( positionArray[i-1][3] - positionArray[i][2]) < 3000  + pbGapLen );
+            bool  connect    = ( positionArray[i-1][3] < 3000 || positionArray[i][2] < 3000 ) || 
+							   ( abs( positionArray[i-1][3] - positionArray[i][2]) < 3000  + pbGapLen ) && ( abs( positionArray[i-1][1] - positionArray[i][0]) < 3000  + pbGapLen );
                                //( abs( 1 - (float)positionArray[i-1][3]/(float)positionArray[i][2]) < 0.2 );
-
-			if( positionArray[i-1][2] >= positionArray[i][2] && positionArray[i-1][3] <= positionArray[i][3] ) connect = false;
+			
+            if( positionArray[i-1][2] >= positionArray[i][2] && positionArray[i-1][3] <= positionArray[i][3] ) connect = false;
 			if( positionArray[i][2] >= positionArray[i-1][2] && positionArray[i][3] <= positionArray[i-1][3] ) connect = false;
+			
+			
+			if ( !(beforeDir == nowDir && dissimilar < 0.2 && connect) )
+			{
+				if( i+1 < (*iter).PBVec.size() )
+				{
+					int   local_pbLen      = abs( startPacbioPosition - positionArray[i+1][1] );
+					int   local_pbGapLen   = abs( positionArray[i-1][1] - positionArray[i+1][0] );
+					int   local_refLen     = abs( positionArray[i+1][2] - positionArray[i+1][3] ) + referenceAccumulationLen;
+					float local_dissimilar = (float)((int)( abs( 1 - (float)pbLen/(float)refLen )*1000 ))/1000;
+					bool  local_beforeDir  = positionArray[i-1][2] > positionArray[i-1][3];
+					bool  local_nowDir     = positionArray[i+1][2]   > positionArray[i+1][3];
+					bool  local_connect    = ( positionArray[i-1][3] < 3000 || positionArray[i+1][2] < 3000 ) || 
+									         ( abs( positionArray[i-1][3] - positionArray[i+1][2]) < 3000  + pbGapLen ) && ( abs( positionArray[i-1][1] - positionArray[i+1][0]) < 3000  + pbGapLen );
+					
+					if( positionArray[i-1][2] >= positionArray[i+1][2] && positionArray[i-1][3] <= positionArray[i+1][3] ) local_connect = false;
+			        if( positionArray[i+1][2] >= positionArray[i-1][2] && positionArray[i+1][3] <= positionArray[i-1][3] ) local_connect = false;
+
+					if ( local_beforeDir == local_nowDir && local_dissimilar < 0.2 && local_connect )
+					{
+						cout << "second chance\n";
+						positionArray[i][0] = positionArray[i-1][0];
+						positionArray[i][1] = positionArray[i-1][1];
+						positionArray[i][2] = positionArray[i-1][2];
+						positionArray[i][3] = positionArray[i-1][3];
+						
+						continue;
+					}
+					
+				}
+			}
+			
+			
+			
 			
             if(showDebug)
 				cout << ( nowDir ? "   <--" : "-->" ) << "\t" 
 				     << positionArray[i-1][1] - positionArray[i][0] << "\t"
+					 << positionArray[i-1][3] - positionArray[i][2] << "\t"
 					 << dissimilar  << "\t" ;
                                
             if ( beforeDir == nowDir && dissimilar < 0.2 && connect)
@@ -457,18 +462,6 @@ int main(int argc, char** argv)
     totalLength /= 2;
     
     //cout<< alignPoint << "\n";
-    /*
-    cout << alignLength[alignPoint/10] << "\t"
-         << alignLength[alignPoint*2/10] << "\t"
-         << alignLength[alignPoint*3/10] << "\t"
-         << alignLength[alignPoint*4/10] << "\t"
-         << alignLength[alignPoint*5/10] << "\t"
-         << alignLength[alignPoint*6/10] << "\t"
-         << alignLength[alignPoint*7/10] << "\t"
-         << alignLength[alignPoint*8/10] << "\t"
-         << alignLength[alignPoint*9/10] << "\t"
-         << alignLength[alignPoint-1] << "\n";
-    */
     
     for(int i = alignPoint - 1 ; i >= 0; i-- )
     {

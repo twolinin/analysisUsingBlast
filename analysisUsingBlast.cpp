@@ -27,8 +27,7 @@ int Cmp(const void *lhs, const void *rhs) {
 int main(int argc, char** argv) 
 {
     std::string blastAlign(argv[1]);
-	//std::string contigFile(argv[2]);
-	
+
     string queryName;
     string refName;
     float bitScore;
@@ -47,44 +46,13 @@ int main(int argc, char** argv)
     int totalAlignContig = 0;
 	
     ifstream inputAlignFile ( blastAlign.c_str() );
-    //ifstream inputContigFile( contigFile.c_str() );
-/*
-	string contigIDArray[100000];
-	int contigLengthArray[100000];
-	int contigLengthPoint = 0;
-	size_t contigTotalLength = 0;
-	size_t TotalHasContigLength = 0;
-	*/
+
     if(!inputAlignFile.is_open())
     {
         std::cout << "can't open "<< blastAlign << "\n";
         return 0;
     }
-	
-    /*if(!inputContigFile.is_open())
-    {
-        std::cout << "can't open "<< contigFile << "\n";
-        return 0;
-    }
-	
-	while(inputContigFile && inputContigFile.is_open())
-	{
-		string contigID;
-		string contigString;
-		
-		inputContigFile >> contigID;
-		inputContigFile >> contigString;
-		
-		contigIDArray[contigLengthPoint] = contigID;
-		contigLengthArray[contigLengthPoint] = contigString.length();
-		contigTotalLength += contigString.length();
-		contigLengthPoint++;
-		
-		//cout << contigID << "\n";
-	}
-	
-	cout << contigTotalLength << "\n";
-	*/
+
     while(inputAlignFile && inputAlignFile.is_open())
     {
          inputAlignFile >> queryName;
@@ -133,22 +101,7 @@ int main(int argc, char** argv)
             tmp.alignLenVec.push_back(alignLen);
             tmp.PBVec.push_back(make_pair(queryStart,queryEnd));
             tmp.refVec.push_back(make_pair(refStart,refEnd));
-            alignData.push_back(tmp);
-            /*
-            std::cout<< queryName  << "\t"
-                 << refName    << "\t"
-                 << bitScore   << "\t"
-                 << alignLen   << "\t"
-                 << unknown1   << "\t"
-                 << unknown2   << "\t"
-                 << queryStart << "\t"
-                 << queryEnd   << "\t"
-                 << refStart   << "\t"
-                 << refEnd     << "\t"
-                 << pValue     << "\t"
-                 << unknown3   << "\t"
-                 << "\n";
-             */    
+            alignData.push_back(tmp);  
         }
         else
         {
@@ -201,22 +154,7 @@ int main(int argc, char** argv)
                     {
                         (*iter).alignLenVec.push_back(alignLen);
                         (*iter).PBVec.push_back(make_pair(queryStart,queryEnd));
-                        (*iter).refVec.push_back(make_pair(refStart,refEnd));
-                        /*
-                        std::cout<< queryName  << "\t"
-                                 << refName    << "\t"
-                                 << bitScore   << "\t"
-                                 << alignLen   << "\t"
-                                 << unknown1   << "\t"
-                                 << unknown2   << "\t"
-                                 << queryStart << "\t"
-                                 << queryEnd   << "\t"
-                                 << refStart   << "\t"
-                                 << refEnd     << "\t"
-                                 << pValue     << "\t"
-                                 << unknown3   << "\t"
-                                 << "\n";
-                         */        
+                        (*iter).refVec.push_back(make_pair(refStart,refEnd));      
                     }
                 }
             }
@@ -229,21 +167,6 @@ int main(int argc, char** argv)
                 tmp.PBVec.push_back(make_pair(queryStart,queryEnd));
                 tmp.refVec.push_back(make_pair(refStart,refEnd));
                 alignData.push_back(tmp);
-                /*
-                std::cout<< queryName  << "\t"
-                 << refName    << "\t"
-                 << bitScore   << "\t"
-                 << alignLen   << "\t"
-                 << unknown1   << "\t"
-                 << unknown2   << "\t"
-                 << queryStart << "\t"
-                 << queryEnd   << "\t"
-                 << refStart   << "\t"
-                 << refEnd     << "\t"
-                 << pValue     << "\t"
-                 << unknown3   << "\t"
-                 << "\n";
-                 */
             }
         }
     }
@@ -335,18 +258,6 @@ int main(int argc, char** argv)
         RangeVec::iterator firPBIter  = (*iter).PBVec.begin();  //record pb align start and end
         RangeVec::iterator firRefIter = (*iter).refVec.begin(); //record ref align start and end
         int positionArray[(*iter).PBVec.size()][4];
-		
-		/*
-		for( int i = 0 ; i < contigLengthPoint ; i++ )
-		{
-			if( contigIDArray[i] == ">" + (*iter).contig )
-			{
-				TotalHasContigLength += contigLengthArray[i];
-			}
-		}
-		*/
-		
-		
 		
         if((*iter).PBVec.size()==1)
         {
@@ -466,33 +377,7 @@ int main(int argc, char** argv)
 					
 				}
 				if(needContinue)continue;
-				
-				/*if( i+1 < (*iter).PBVec.size() )
-				{
-					int   local_pbLen      = abs( startPacbioPosition - positionArray[i+1][1] );
-					int   local_pbGapLen   = abs( positionArray[i-1][1] - positionArray[i+1][0] );
-					int   local_refLen     = abs( positionArray[i+1][2] - positionArray[i+1][3] ) + referenceAccumulationLen;
-					float local_dissimilar = (float)((int)( abs( 1 - (float)pbLen/(float)refLen )*1000 ))/1000;
-					bool  local_beforeDir  = positionArray[i-1][2] > positionArray[i-1][3];
-					bool  local_nowDir     = positionArray[i+1][2]   > positionArray[i+1][3];
-					bool  local_connect    = ( positionArray[i-1][3] < 3000 || positionArray[i+1][2] < 3000 ) || 
-									         ( abs( positionArray[i-1][3] - positionArray[i+1][2]) < 3000  + local_pbGapLen ) && ( abs( positionArray[i-1][1] - positionArray[i+1][0]) < 3000  + local_pbGapLen );
-					
-					if( positionArray[i-1][2] >= positionArray[i+1][2] && positionArray[i-1][3] <= positionArray[i+1][3] ) local_connect = false;
-			        if( positionArray[i+1][2] >= positionArray[i-1][2] && positionArray[i+1][3] <= positionArray[i-1][3] ) local_connect = false;
 
-					if ( local_beforeDir == local_nowDir && local_dissimilar < 0.2 && local_connect )
-					{
-						if(showDebug) cout << "second chance\n";
-						positionArray[i][0] = positionArray[i-1][0];
-						positionArray[i][1] = positionArray[i-1][1];
-						positionArray[i][2] = positionArray[i-1][2];
-						positionArray[i][3] = positionArray[i-1][3];
-						
-						continue;
-					}
-					
-				}*/
 			}
 			
             if(showDebug)

@@ -28,4 +28,4 @@ bool getBlastResult(std::string blastAlignFile, AlignVec &result);
 
 AlignVec filterDuplicate(AlignVec rawAlignData);
 	
-float alignRegionRatio(int positionArray[][4], int arraySize, int start);
+float alignRegionRatio(int positionArray[][4], int arraySize, int start, int &end);

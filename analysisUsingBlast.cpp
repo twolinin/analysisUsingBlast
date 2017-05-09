@@ -1,94 +1,8 @@
 #include "analysisUsingBlast.h"
 
-bool showDebug = false;
+bool showDebug = true;
 
-float alignRegionRatio(int positionArray[][4], int arraySize, int start, int &end )
-{
-    size_t loaclUnAlignLength = 1;
-    size_t contigLength =  abs( positionArray[start][0] - positionArray[arraySize-1][1]) ;
-    
-    bool  local_connect = true;
 
-	if(showDebug)
-    {
-        cout.width(26);    
-        cout << positionArray[start][0];
-        cout.width(13);    
-        cout << positionArray[start][1];
-        cout.width(13);             
-        cout << positionArray[start][2];
-        cout.width(13);    
-        cout << positionArray[start][3];
-        cout.width(13);    
-        cout << ( (positionArray[start][2] > positionArray[start][3]) ? "   <--" : "-->" );
-		cout << "\n";
-    }
-	
-	// use the parameter of distance for preventing from checking all results
-	for(int target = start + 1 , distance = 1 ; target < arraySize && distance < 6 ; target++, distance++ )
-	{
-		// check same region by calculate dissimilar ratio
-        int   local_pbLen      = abs( positionArray[start][0] - positionArray[target][1] );
-        int   local_refLen     = abs( positionArray[start][2] - positionArray[target][3] );
-        float local_disSimilar = (float)((int)( abs( 1 - (float)local_pbLen/(float)local_refLen )*1000 ))/1000;
-        
-		// check same region by two fragment direction
-        bool  local_beforeDir  = positionArray[start][2]  > positionArray[start][3];
-        bool  local_nowDir     = positionArray[target][2] > positionArray[target][3];
-           
-		// contig gap size
-        int   local_pbGapLen   = abs( positionArray[start][1] - positionArray[target][0] );
-		
-		// check gap size by contig position
-		if( abs( positionArray[start][3] - positionArray[target][2] ) > 7000 + local_pbGapLen ) local_connect = false;
-		// check gap size by reference position
-		if( abs( positionArray[start][1] - positionArray[target][0] ) > 7000 + local_pbGapLen ) local_connect = false;
-		// prevent circular align result
-		if(( positionArray[start][3] < 3000 || positionArray[target][2] < 3000 ) ) local_connect = true;
-		// prevent large gap size
-        if( (float)local_pbGapLen/(float)max(positionArray[start][1],positionArray[target][0]) > 0.2 ) local_connect = false;
-        // check contain
-        if( positionArray[start][2] >= positionArray[target][2] && positionArray[start][3] <= positionArray[target][3] ) local_connect = false;
-        if( positionArray[target][2] >= positionArray[start][2] && positionArray[target][3] <= positionArray[start][3] ) local_connect = false;
-        
-		if(showDebug)
-        {
-            cout.width(26);    
-            cout << positionArray[target][0];
-            cout.width(13);    
-            cout << positionArray[target][1];
-            cout.width(13);             
-            cout << positionArray[target][2];
-            cout.width(13);    
-            cout << positionArray[target][3];
-            cout.width(13);    
-            cout << ( local_nowDir ? "   <--" : "-->" );
-            cout.width(13);    
-            cout << local_disSimilar;
-			cout.width(13);    
-            cout << (local_connect ? "O":"X") ;
-        }
-		
-		// regard two alignment result as one
-		if ( local_beforeDir == local_nowDir && ( local_disSimilar < 0.2 || local_connect ) )
-		{
-			if(showDebug)cout << "\t" << distance << "\n";
-			// refresh distance counter
-			distance = 1;
-			// refresh number of blast result
-			end = target;
-			// the new round will begin after replace start with target
-			start = target;
-		}
-		else
-		{
-			if(showDebug)cout << "\n";
-			loaclUnAlignLength += abs( positionArray[target][0] - positionArray[target][1] );
-		}
-	}
-	
-	return (float)loaclUnAlignLength/(float)contigLength;
-}
 
 int main(int argc, char** argv) 
 {
@@ -154,10 +68,12 @@ int main(int argc, char** argv)
             firPBIter++;
             firRefIter++;	
         }
-
-        qsort(positionArray,(*iter).PBVec.size(),sizeof(positionArray[0]),Cmp);
+		
+		qsort(positionArray,(*iter).PBVec.size(),sizeof(positionArray[0]),Cmp);
         
-		/*if(showDebug)
+		totalLength += abs( positionArray[0][0] - positionArray[(*iter).PBVec.size()-1][1]) + 1;
+		
+		if(showDebug)
 		{
 			cout<< "\n";
 			for(int i = 0 ; i < (*iter).PBVec.size() ; i++ )
@@ -177,33 +93,34 @@ int main(int argc, char** argv)
 				
 			}
 			cout<< "\n";
-		}*/
+		}
 		
 		if(showDebug)cout << (*iter).contig << "\n";
 		
         int continueMisassembled = 0;
-
+		
+		
         for(int i = 0 ; i < (*iter).PBVec.size() ; i++ )
         {
             int tmpArray[(*iter).PBVec.size()][4];
             int endBlastResult = i;
-            
+			
             std::copy( positionArray, positionArray + (*iter).PBVec.size() , tmpArray);
  
 			float alignRatio = alignRegionRatio( tmpArray, (*iter).PBVec.size(), i, endBlastResult );
 
-            if(showDebug) cout  << ((float)((int)(alignRatio*1000 )))/1000 << "\t";
-            
-			alignLength[alignPoint]  = abs( positionArray[i][0] - positionArray[endBlastResult][1] );
-            alignPoint++;
+			alignLength[alignPoint] = abs( positionArray[i][0] - positionArray[endBlastResult][1]) + 1;
+			alignPoint++;
 			
-			if( alignRatio > 0.2 && i != (*iter).PBVec.size() - 1 ) misassembled++;
-
 			i = endBlastResult;
-            
-            totalLength += alignLength[alignPoint-1];
-            
-            if(showDebug) cout  << misassembled << "\n";
+	
+			if( alignRatio > 0.2 && i != (*iter).PBVec.size() - 1 ) 
+			{
+				misassembled++;
+			}
+			
+
+            if(showDebug) cout  << ((float)((int)(alignRatio*1000 )))/1000 << "\t" << alignLength[alignPoint-1] << "\t" << misassembled << "\n";
 			
         }
 		if(showDebug)cout << "\n";
@@ -236,7 +153,8 @@ int main(int argc, char** argv)
 }
 
 
-int Cmp(const void *lhs, const void *rhs) {
+int Cmp(const void *lhs, const void *rhs)
+{
     return ((const int *)lhs)[1]-((const int *)rhs)[1];
 }
 
@@ -458,3 +376,90 @@ AlignVec filterDuplicate(AlignVec rawAlignData)
     return result;
 }
 
+float alignRegionRatio(int positionArray[][4], int arraySize, int start, int &end )
+{
+    size_t loaclUnAlignLength = 1;
+    size_t contigLength =  abs( positionArray[start][0] - positionArray[arraySize-1][1]);
+    
+    bool  local_connect = true;
+
+	if(showDebug)
+    {
+        cout.width(26);    
+        cout << positionArray[start][0];
+        cout.width(13);    
+        cout << positionArray[start][1];
+        cout.width(13);             
+        cout << positionArray[start][2];
+        cout.width(13);    
+        cout << positionArray[start][3];
+        cout.width(13);    
+        cout << ( (positionArray[start][2] > positionArray[start][3]) ? "   <--" : "-->" );
+		cout << "\n";
+    }
+	
+	// use the parameter of distance for preventing from checking all results
+	for(int target = start + 1 , distance = 1 ; target < arraySize && distance < 6 ; target++, distance++ )
+	{
+		// check same region by calculate dissimilar ratio
+        int   local_pbLen      = abs( positionArray[start][0] - positionArray[target][1] );
+        int   local_refLen     = abs( positionArray[start][2] - positionArray[target][3] );
+        float local_disSimilar = (float)((int)( abs( 1 - (float)local_pbLen/(float)local_refLen )*1000 ))/1000;
+        
+		// check same region by two fragment direction
+        bool  local_beforeDir  = positionArray[start][2]  > positionArray[start][3];
+        bool  local_nowDir     = positionArray[target][2] > positionArray[target][3];
+           
+		// contig gap size
+        int   local_pbGapLen   = abs( positionArray[start][1] - positionArray[target][0] );
+		
+		// check gap size by contig position
+		if( abs( positionArray[start][3] - positionArray[target][2] ) > 7000 + local_pbGapLen ) local_connect = false;
+		// check gap size by reference position
+		if( abs( positionArray[start][1] - positionArray[target][0] ) > 7000 + local_pbGapLen ) local_connect = false;
+		// prevent circular align result
+		if(( positionArray[start][3] < 3000 || positionArray[target][2] < 3000 ) ) local_connect = true;
+		// prevent large gap size
+        if( (float)local_pbGapLen/(float)max(positionArray[start][1],positionArray[target][0]) > 0.2 ) local_connect = false;
+        // check contain
+        if( positionArray[start][2] >= positionArray[target][2] && positionArray[start][3] <= positionArray[target][3] ) local_connect = false;
+        if( positionArray[target][2] >= positionArray[start][2] && positionArray[target][3] <= positionArray[start][3] ) local_connect = false;
+        
+		if(showDebug)
+        {
+            cout.width(26);    
+            cout << positionArray[target][0];
+            cout.width(13);    
+            cout << positionArray[target][1];
+            cout.width(13);             
+            cout << positionArray[target][2];
+            cout.width(13);    
+            cout << positionArray[target][3];
+            cout.width(13);    
+            cout << ( local_nowDir ? "   <--" : "-->" );
+            cout.width(13);    
+            cout << local_disSimilar;
+			cout.width(13);    
+            cout << (local_connect ? "O":"X") ;
+        }
+		
+		// regard two alignment result as one
+		if ( local_beforeDir == local_nowDir && ( local_disSimilar < 0.2 || local_connect ) )
+		{
+			if(showDebug)cout << "\t" << distance << "\n";
+			// refresh distance counter
+			distance = 1;
+			// refresh number of blast result
+			end = target;
+			// the new round will begin after replace start with target
+			start = target;
+		}
+		else
+		{
+			if(showDebug)cout << "\n";
+			loaclUnAlignLength += abs( positionArray[target][0] - positionArray[target][1] );
+		}
+	}
+	
+	return (float)loaclUnAlignLength/(float)contigLength;
+}

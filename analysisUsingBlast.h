@@ -18,7 +18,7 @@ struct alignInfo
 {
     string contig;
     vector<int> alignLenVec;
-    RangeVec PBVec;
+    RangeVec contigVec;
     RangeVec refVec;
 };
 

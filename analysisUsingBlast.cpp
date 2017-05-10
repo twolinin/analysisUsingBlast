@@ -1,6 +1,6 @@
 #include "analysisUsingBlast.h"
 
-bool showDebug = true;
+bool showDebug = false;
 
 
 
@@ -28,11 +28,11 @@ int main(int argc, char** argv)
     for(AlignVec::iterator iter = resultData.begin() ; iter != resultData.end() ; ++iter)
     {
         vector<int>::iterator alnter  = (*iter).alignLenVec.begin(); // record align length
-        RangeVec::iterator firPBIter  = (*iter).PBVec.begin();  //record pb align start and end
+        RangeVec::iterator firPBIter  = (*iter).contigVec.begin();  //record contig align start and end
         RangeVec::iterator firRefIter = (*iter).refVec.begin(); //record ref align start and end
-        int positionArray[(*iter).PBVec.size()][4];
+        int positionArray[(*iter).contigVec.size()][4];
         
-        if((*iter).PBVec.size()==1)
+        if((*iter).contigVec.size()==1)
         { 
             /*if(showDebug)
             {
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
             continue;
         }
 
-        for(int i = 0 ; i < (*iter).PBVec.size() ; i++ )
+        for(int i = 0 ; i < (*iter).contigVec.size() ; i++ )
         {
             positionArray[i][0] = (*firPBIter).first;
             positionArray[i][1] = (*firPBIter).second;
@@ -66,64 +66,64 @@ int main(int argc, char** argv)
             positionArray[i][3] = (*firRefIter).second;
             
             firPBIter++;
-            firRefIter++;	
+            firRefIter++;    
         }
-		
-		qsort(positionArray,(*iter).PBVec.size(),sizeof(positionArray[0]),Cmp);
         
-		totalLength += abs( positionArray[0][0] - positionArray[(*iter).PBVec.size()-1][1]) + 1;
-		
-		if(showDebug)
-		{
-			cout<< "\n";
-			for(int i = 0 ; i < (*iter).PBVec.size() ; i++ )
-			{
-				cout << (*iter).contig;
-				cout.width(13);
-				cout << positionArray[i][0];
-				cout.width(13);
-				cout << positionArray[i][1];
-				cout.width(13);
-				cout << positionArray[i][2];
-				cout.width(13);
-				cout << positionArray[i][3];
-				cout.width(13);
-				cout << ( (positionArray[i][2] > positionArray[i][3]) ? "   <--" : "-->" );
-				cout << "\n";
-				
-			}
-			cout<< "\n";
-		}
-		
-		if(showDebug)cout << (*iter).contig << "\n";
-		
-        int continueMisassembled = 0;
-		
-		
-        for(int i = 0 ; i < (*iter).PBVec.size() ; i++ )
+        qsort(positionArray,(*iter).contigVec.size(),sizeof(positionArray[0]),Cmp);
+        
+        totalLength += abs( positionArray[0][0] - positionArray[(*iter).contigVec.size()-1][1]) + 1;
+        
+        if(showDebug)
         {
-            int tmpArray[(*iter).PBVec.size()][4];
+            cout<< "\n";
+            for(int i = 0 ; i < (*iter).contigVec.size() ; i++ )
+            {
+                cout << (*iter).contig;
+                cout.width(13);
+                cout << positionArray[i][0];
+                cout.width(13);
+                cout << positionArray[i][1];
+                cout.width(13);
+                cout << positionArray[i][2];
+                cout.width(13);
+                cout << positionArray[i][3];
+                cout.width(13);
+                cout << ( (positionArray[i][2] > positionArray[i][3]) ? "   <--" : "-->" );
+                cout << "\n";
+                
+            }
+            cout<< "\n";
+        }
+        
+        if(showDebug)cout << (*iter).contig << "\n";
+        
+        int continueMisassembled = 0;
+        
+        
+        for(int i = 0 ; i < (*iter).contigVec.size() ; i++ )
+        {
+            int tmpArray[(*iter).contigVec.size()][4];
             int endBlastResult = i;
-			
-            std::copy( positionArray, positionArray + (*iter).PBVec.size() , tmpArray);
+            
+            std::copy( positionArray, positionArray + (*iter).contigVec.size() , tmpArray);
  
-			float alignRatio = alignRegionRatio( tmpArray, (*iter).PBVec.size(), i, endBlastResult );
+            float alignRatio = alignRegionRatio( tmpArray, (*iter).contigVec.size(), i, endBlastResult );
 
-			alignLength[alignPoint] = abs( positionArray[i][0] - positionArray[endBlastResult][1]) + 1;
-			alignPoint++;
-			
-			i = endBlastResult;
-	
-			if( alignRatio > 0.2 && i != (*iter).PBVec.size() - 1 ) 
-			{
-				misassembled++;
-			}
-			
+            alignLength[alignPoint] = abs( positionArray[i][0] - positionArray[endBlastResult][1]) + 1;
+            alignPoint++;
+            
+            i = endBlastResult;
+    
+            if( alignRatio > 0.2 && i != (*iter).contigVec.size() - 1 ) 
+            {
+                misassembled++;
+            }
+            
 
             if(showDebug) cout  << ((float)((int)(alignRatio*1000 )))/1000 << "\t" << alignLength[alignPoint-1] << "\t" << misassembled << "\n";
-			
+            
         }
-		if(showDebug)cout << "\n";
+        if(showDebug)cout << "\n";
     }
     
     //cout << totalLength << "\n";
@@ -227,7 +227,7 @@ bool getBlastResult(std::string blastAlignFile, AlignVec &result)
             alignInfo tmp;
             tmp.contig = queryName;
             tmp.alignLenVec.push_back(alignLen);
-            tmp.PBVec.push_back(make_pair(queryStart,queryEnd));
+            tmp.contigVec.push_back(make_pair(queryStart,queryEnd));
             tmp.refVec.push_back(make_pair(refStart,refEnd));
             result.push_back(tmp);  
         }
@@ -243,7 +243,7 @@ bool getBlastResult(std::string blastAlignFile, AlignVec &result)
                     
                     bool contain = false;
                     
-                    for(RangeVec::iterator posIter = (*iter).PBVec.begin() ; posIter != (*iter).PBVec.end() ; ++posIter)
+                    for(RangeVec::iterator posIter = (*iter).contigVec.begin() ; posIter != (*iter).contigVec.end() ; ++posIter)
                     {
                         // --------------------------------------
                         //        -------------------------
@@ -281,7 +281,7 @@ bool getBlastResult(std::string blastAlignFile, AlignVec &result)
                     if( !contain && alignLen >= 1000 )
                     {
                         (*iter).alignLenVec.push_back(alignLen);
-                        (*iter).PBVec.push_back(make_pair(queryStart,queryEnd));
+                        (*iter).contigVec.push_back(make_pair(queryStart,queryEnd));
                         (*iter).refVec.push_back(make_pair(refStart,refEnd));      
                     }
                 }
@@ -292,7 +292,7 @@ bool getBlastResult(std::string blastAlignFile, AlignVec &result)
                 alignInfo tmp;
                 tmp.contig = queryName;
                 tmp.alignLenVec.push_back(alignLen);
-                tmp.PBVec.push_back(make_pair(queryStart,queryEnd));
+                tmp.contigVec.push_back(make_pair(queryStart,queryEnd));
                 tmp.refVec.push_back(make_pair(refStart,refEnd));
                 result.push_back(tmp);
             }
@@ -315,20 +315,20 @@ AlignVec filterDuplicate(AlignVec rawAlignData)
         RangeVec::iterator refIter = (*iter).refVec.begin();
         vector<int>::iterator alignIter = (*iter).alignLenVec.begin();
         
-        if((*iter).PBVec.size()==1)
+        if((*iter).contigVec.size()==1)
         {
             result.push_back((*iter));
             continue;
         }
 
-        for(RangeVec::iterator posIter = (*iter).PBVec.begin() ; posIter != (*iter).PBVec.end() ; ++posIter)
+        for(RangeVec::iterator posIter = (*iter).contigVec.begin() ; posIter != (*iter).contigVec.end() ; ++posIter)
             if( (*posIter).second > max ) max = (*posIter).second;
         
         bitArray = new bool[max];
         
         for( int i = 0 ; i < max ; i++ ) bitArray[i] = false;
         
-        for(RangeVec::iterator posIter = (*iter).PBVec.begin() ; posIter != (*iter).PBVec.end() ; ++posIter)
+        for(RangeVec::iterator posIter = (*iter).contigVec.begin() ; posIter != (*iter).contigVec.end() ; ++posIter)
         {
             int overlap   = 0;
             int noOverlap = 0;
@@ -354,7 +354,7 @@ AlignVec filterDuplicate(AlignVec rawAlignData)
                     alignInfo tmp;
                     tmp.contig = (*iter).contig;
                     tmp.alignLenVec.push_back((*alignIter));
-                    tmp.PBVec.push_back(make_pair((*posIter).first,(*posIter).second));
+                    tmp.contigVec.push_back(make_pair((*posIter).first,(*posIter).second));
                     tmp.refVec.push_back(make_pair((*refIter).first,(*refIter).second));
                     result.push_back(tmp);
                     ++refIter;
@@ -365,7 +365,7 @@ AlignVec filterDuplicate(AlignVec rawAlignData)
                     AlignVec::iterator tmp = result.end();
                     --tmp;
                     (*tmp).alignLenVec.push_back((*alignIter));
-                    (*tmp).PBVec.push_back(make_pair((*posIter).first,(*posIter).second));
+                    (*tmp).contigVec.push_back(make_pair((*posIter).first,(*posIter).second));
                     (*tmp).refVec.push_back(make_pair((*refIter).first,(*refIter).second));
                     ++refIter;
                     
@@ -383,7 +383,7 @@ float alignRegionRatio(int positionArray[][4], int arraySize, int start, int &en
     
     bool  local_connect = true;
 
-	if(showDebug)
+    if(showDebug)
     {
         cout.width(26);    
         cout << positionArray[start][0];
@@ -395,37 +395,40 @@ float alignRegionRatio(int positionArray[][4], int arraySize, int start, int &en
         cout << positionArray[start][3];
         cout.width(13);    
         cout << ( (positionArray[start][2] > positionArray[start][3]) ? "   <--" : "-->" );
-		cout << "\n";
+        cout << "\n";
     }
-	
-	// use the parameter of distance for preventing from checking all results
-	for(int target = start + 1 , distance = 1 ; target < arraySize && distance < 6 ; target++, distance++ )
-	{
-		// check same region by calculate dissimilar ratio
-        int   local_pbLen      = abs( positionArray[start][0] - positionArray[target][1] );
+    
+    // use the parameter of distance for preventing from checking all results
+    for(int target = start + 1 , distance = 1 ; target < arraySize && distance <= 10 ; target++, distance++ )
+    {
+        // check same region by calculate dissimilar ratio
+        int   local_contitLen  = abs( positionArray[start][0] - positionArray[target][1] );
         int   local_refLen     = abs( positionArray[start][2] - positionArray[target][3] );
-        float local_disSimilar = (float)((int)( abs( 1 - (float)local_pbLen/(float)local_refLen )*1000 ))/1000;
+        float local_disSimilar = (float)((int)( abs( 1 - (float)local_contitLen/(float)local_refLen )*1000 ))/1000;
+            
+        // check same region by length
+        if( local_contitLen < 7000 && local_refLen < 7000 ) local_disSimilar = 0;
         
-		// check same region by two fragment direction
+        // check same region by two fragment direction
         bool  local_beforeDir  = positionArray[start][2]  > positionArray[start][3];
         bool  local_nowDir     = positionArray[target][2] > positionArray[target][3];
            
-		// contig gap size
-        int   local_pbGapLen   = abs( positionArray[start][1] - positionArray[target][0] );
-		
-		// check gap size by contig position
-		if( abs( positionArray[start][3] - positionArray[target][2] ) > 7000 + local_pbGapLen ) local_connect = false;
-		// check gap size by reference position
-		if( abs( positionArray[start][1] - positionArray[target][0] ) > 7000 + local_pbGapLen ) local_connect = false;
-		// prevent circular align result
-		if(( positionArray[start][3] < 3000 || positionArray[target][2] < 3000 ) ) local_connect = true;
-		// prevent large gap size
-        if( (float)local_pbGapLen/(float)max(positionArray[start][1],positionArray[target][0]) > 0.2 ) local_connect = false;
+        // contig gap size
+        int   local_contigGapLen   = abs( positionArray[start][1] - positionArray[target][0] );
+        
+        // check gap size by contig position
+        if( abs( positionArray[start][3] - positionArray[target][2] ) > 7000 + local_contigGapLen ) local_connect = false;
+        // check gap size by reference position
+        if( abs( positionArray[start][1] - positionArray[target][0] ) > 7000 + local_contigGapLen ) local_connect = false;
+        // prevent circular align result
+        if(( positionArray[start][3] < 3000 || positionArray[target][2] < 3000 ) ) local_connect = true;
+        // prevent large gap size
+        if( (float)local_contigGapLen/(float)max(positionArray[start][1],positionArray[target][0]) > 0.2 ) local_connect = false;
         // check contain
         if( positionArray[start][2] >= positionArray[target][2] && positionArray[start][3] <= positionArray[target][3] ) local_connect = false;
         if( positionArray[target][2] >= positionArray[start][2] && positionArray[target][3] <= positionArray[start][3] ) local_connect = false;
         
-		if(showDebug)
+        if(showDebug)
         {
             cout.width(26);    
             cout << positionArray[target][0];
@@ -439,27 +442,27 @@ float alignRegionRatio(int positionArray[][4], int arraySize, int start, int &en
             cout << ( local_nowDir ? "   <--" : "-->" );
             cout.width(13);    
             cout << local_disSimilar;
-			cout.width(13);    
+            cout.width(13);    
             cout << (local_connect ? "O":"X") ;
         }
-		
-		// regard two alignment result as one
-		if ( local_beforeDir == local_nowDir && ( local_disSimilar < 0.2 || local_connect ) )
-		{
-			if(showDebug)cout << "\t" << distance << "\n";
-			// refresh distance counter
-			distance = 1;
-			// refresh number of blast result
-			end = target;
-			// the new round will begin after replace start with target
-			start = target;
-		}
-		else
-		{
-			if(showDebug)cout << "\n";
-			loaclUnAlignLength += abs( positionArray[target][0] - positionArray[target][1] );
-		}
-	}
-	
-	return (float)loaclUnAlignLength/(float)contigLength;
+        
+        // regard two alignment result as one
+        if ( local_beforeDir == local_nowDir && ( local_disSimilar < 0.2 || local_connect ) )
+        {
+            if(showDebug)cout << "\t" << distance << "\n";
+            // refresh distance counter
+            distance = 1;
+            // refresh number of blast result
+            end = target;
+            // the new round will begin after replace start with target
+            start = target;
+        }
+        else
+        {
+            if(showDebug)cout << "\n";
+            loaclUnAlignLength += abs( positionArray[target][0] - positionArray[target][1] );
+        }
+    }
+    
+    return (float)loaclUnAlignLength/(float)contigLength;
 }

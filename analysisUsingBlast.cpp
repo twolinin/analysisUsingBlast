@@ -3,7 +3,6 @@
 bool showDebug = false;
 
 
-
 int main(int argc, char** argv) 
 {
 
@@ -148,7 +147,7 @@ int main(int argc, char** argv)
     cout 
          //<< totalAlignContig << "\t" 
          << misassembled     << "\n";
-     
+	
     return 0;
 }
 
@@ -401,27 +400,25 @@ float alignRegionRatio(int positionArray[][4], int arraySize, int start, int &en
     // use the parameter of distance for preventing from checking all results
     for(int target = start + 1 , distance = 1 ; target < arraySize && distance <= 10 ; target++, distance++ )
     {
-        // check same region by calculate dissimilar ratio
-        int   local_contitLen  = abs( positionArray[start][0] - positionArray[target][1] );
-        int   local_refLen     = abs( positionArray[start][2] - positionArray[target][3] );
-        float local_disSimilar = (float)((int)( abs( 1 - (float)local_contitLen/(float)local_refLen )*1000 ))/1000;
-            
-        // check same region by length
-        if( local_contitLen < 7000 && local_refLen < 7000 ) local_disSimilar = 0;
-        
         // check same region by two fragment direction
         bool  local_beforeDir  = positionArray[start][2]  > positionArray[start][3];
         bool  local_nowDir     = positionArray[target][2] > positionArray[target][3];
-           
-        // contig gap size
-        int   local_contigGapLen   = abs( positionArray[start][1] - positionArray[target][0] );
+		
+		// check same region by calculate dissimilar ratio
+        int   local_contitLen  = abs( positionArray[start][0] - positionArray[target][1] );
+        int   local_refLen     = abs( positionArray[start][2] - positionArray[target][3] );
+        float local_disSimilar = (float)((int)( abs( 1 - (float)local_contitLen/(float)local_refLen )*1000 ))/1000;
+        
+		// contig gap size
+        int   local_contigGapLen = abs( positionArray[start][1] - positionArray[target][0] );
+        int   local_refGapLen    = abs( positionArray[start][3] - positionArray[target][2] );
         
         // check gap size by contig position
-        if( abs( positionArray[start][3] - positionArray[target][2] ) > 7000 + local_contigGapLen ) local_connect = false;
+        if( local_refGapLen    > 1000  ) local_connect = false;
         // check gap size by reference position
-        if( abs( positionArray[start][1] - positionArray[target][0] ) > 7000 + local_contigGapLen ) local_connect = false;
+        if( local_contigGapLen > 1000  ) local_connect = false;
         // prevent circular align result
-        if(( positionArray[start][3] < 3000 || positionArray[target][2] < 3000 ) ) local_connect = true;
+        if(( positionArray[start][3] < 1000 || positionArray[target][2] < 1000 ) ) local_connect = true;
         // prevent large gap size
         if( (float)local_contigGapLen/(float)max(positionArray[start][1],positionArray[target][0]) > 0.2 ) local_connect = false;
         // check contain
@@ -449,7 +446,7 @@ float alignRegionRatio(int positionArray[][4], int arraySize, int start, int &en
         // regard two alignment result as one
         if ( local_beforeDir == local_nowDir && ( local_disSimilar < 0.2 || local_connect ) )
         {
-            if(showDebug)cout << "\t" << distance << "\n";
+			if(showDebug)cout << "\t" << distance << "\n";
             // refresh distance counter
             distance = 1;
             // refresh number of blast result

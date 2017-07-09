@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         
         if((*iter).contigVec.size()==1)
         { 
-            /*if(showDebug)
+            if(showDebug)
             {
                 cout.width(13);
                 cout << (*iter).contig;
@@ -46,12 +46,13 @@ int main(int argc, char** argv)
                 cout.width(13);                    
                 cout << (*firRefIter).second ;
                 cout.width(13);
-            }*/
+            }
             
-            alignLength[alignPoint] = (*alnter);
+			alignLength[alignPoint] = abs( (*firPBIter).first - (*firPBIter).second )+1;
+            //alignLength[alignPoint] = (*alnter);
             totalLength += alignLength[alignPoint];
             
-            //if(showDebug)cout<< alignLength[alignPoint] << "\n";
+            if(showDebug)cout<< alignLength[alignPoint] << "\n";
             
             alignPoint++;
             continue;
@@ -125,7 +126,8 @@ int main(int argc, char** argv)
         if(showDebug)cout << "\n";
     }
     
-    //cout << totalLength << "\n";
+    cout<< "total align length\n" 
+		<< totalLength << "\n";
     
     sort(alignLength,alignLength+alignPoint);
     
@@ -138,7 +140,8 @@ int main(int argc, char** argv)
     {
         if( alignLength[i] > totalLength )
         {
-            cout << alignLength[i] << "\t";
+            cout<< "NA50\n" 
+				<< alignLength[i] << "\n";
             break;
         }
         totalLength -= alignLength[i];
@@ -146,6 +149,7 @@ int main(int argc, char** argv)
     
     cout 
          //<< totalAlignContig << "\t" 
+		 << "misassembled contig\n" 
          << misassembled     << "\n";
 	
     return 0;

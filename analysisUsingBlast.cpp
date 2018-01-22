@@ -1,11 +1,107 @@
 #include "analysisUsingBlast.h"
 
-bool showDebug = false;
-
+bool showDebug  = true;
+bool showDetail = false;
 
 int main(int argc, char** argv) 
 {
+	//caculateNA50(argc,argv);
+	chimeraDetected(argc,argv);
 
+    return 0;
+}
+
+void chimeraDetected(int argc, char** argv)
+{
+	AlignVec alignData;
+	AlignVec resultData;
+	
+	// read raw blast result
+    if(!getBlastResult(argv[1],alignData))return;
+	// filter duplicate
+    //resultData = filterDuplicate(alignData);
+	
+	for(AlignVec::iterator iter = alignData.begin() ; iter != alignData.end() ; ++iter)
+    {
+		//vector<int>::iterator alnter  = (*iter).alignLenVec.begin(); // record align length
+        RangeVec::iterator firPBIter  = (*iter).contigVec.begin();  //record contig align start and end
+        RangeVec::iterator firRefIter = (*iter).refVec.begin(); //record ref align start and end
+        int positionArray[(*iter).contigVec.size()][4];
+		
+		
+		if((*iter).contigVec.size()==1)continue;
+		/*
+		if(showDebug)
+        {
+			cout << (*iter).contig;
+			cout<<"\n";
+			//cout << "size " << (*iter).contigVec.size() << "\t" << (*iter).refVec.size() << "\n";
+			
+			RangeVec::iterator tmpfirPBIter = firPBIter;
+			RangeVec::iterator tmpfirRefIter = firRefIter;
+			
+			while( tmpfirPBIter != (*iter).contigVec.end() && tmpfirRefIter != (*iter).refVec.end() )
+			{
+				cout<< (*tmpfirPBIter).first   << "\t" 
+				    << (*tmpfirRefIter).first  << "\t" 
+					<< (*tmpfirPBIter).second  << "\t" 
+					<< (*tmpfirRefIter).second << "\n";
+					
+				tmpfirPBIter++;
+				tmpfirRefIter++;
+			}
+        }
+		*/
+		for(int i = 0 ; i < (*iter).contigVec.size() ; i++ )
+        {
+            positionArray[i][0] = (*firPBIter).first;
+            positionArray[i][1] = (*firPBIter).second;
+            positionArray[i][2] = (*firRefIter).first;
+            positionArray[i][3] = (*firRefIter).second;
+            
+            firPBIter++;
+            firRefIter++;    
+        }
+        
+        qsort(positionArray,(*iter).contigVec.size(),sizeof(positionArray[0]),Cmp);
+		
+		if(showDebug)
+		{
+			for(int i = 0 ; i < (*iter).contigVec.size() ; i++ )
+            {
+				if( i == 0 )continue;
+				
+				int pbDistance = abs( positionArray[i][0] - positionArray[i-1][1] );
+				int refDistance = abs( positionArray[i][2] - positionArray[i-1][3] );
+				
+				if( abs( pbDistance - refDistance ) > 10000 )
+				{
+					for(int j = 0 ; j < (*iter).contigVec.size() ; j++ )
+					{
+						cout << (*iter).contig;
+						cout.width(13);
+						cout << positionArray[j][0];
+						cout.width(13);
+						cout << positionArray[j][1];
+						cout.width(13);
+						cout << positionArray[j][2];
+						cout.width(13);
+						cout << positionArray[j][3];
+						cout.width(13);
+						cout << ( (positionArray[j][2] > positionArray[j][3]) ? "   <--" : "-->" );
+						cout << "\n";
+					}
+					cout << "\n";
+					break;
+				}
+            }
+		}
+	}
+}
+
+
+void caculateNA50(int argc, char** argv)
+{
     AlignVec alignData;
     AlignVec resultData;
     
@@ -17,7 +113,7 @@ int main(int argc, char** argv)
     size_t totalLength = 0;
     
     // read raw blast result
-    if(!getBlastResult(argv[1],alignData))return 0;
+    if(!getBlastResult(argv[1],alignData))return;
     
     // filter duplicate
     resultData = filterDuplicate(alignData);
@@ -125,9 +221,8 @@ int main(int argc, char** argv)
         }
         if(showDebug)cout << "\n";
     }
-    
-    cout<< "total align length\n" 
-		<< totalLength << "\n";
+	
+    if(showDetail) cout<< "total align length\n" << totalLength << "\n";
     
     sort(alignLength,alignLength+alignPoint);
     
@@ -140,21 +235,19 @@ int main(int argc, char** argv)
     {
         if( alignLength[i] > totalLength )
         {
-            cout<< "NA50\n" 
-				<< alignLength[i] << "\n";
+            if(showDetail) cout<< "NA50\n" ;
+			cout << alignLength[i] << "\n";
             break;
         }
         totalLength -= alignLength[i];
     }
     
-    cout 
-         //<< totalAlignContig << "\t" 
-		 << "misassembled contig\n" 
-         << misassembled     << "\n";
+	if(showDetail)
+		cout //<< totalAlignContig << "\t" 
+			 << "misassembled contig\n" 
+			 << misassembled     << "\n";
 	
-    return 0;
 }
-
 
 int Cmp(const void *lhs, const void *rhs)
 {
@@ -198,17 +291,17 @@ bool getBlastResult(std::string blastAlignFile, AlignVec &result)
          inputAlignFile >> refEnd;
          inputAlignFile >> pValue;
          inputAlignFile >> unknown3;
-         /*
-        if( queryName == "tig00000142")
-        
+         
+        if( queryName == "tig00000142" )
+        {
              std::cout<< queryName  << "\t" 
                       << alignLen   << "\t"
                       << queryStart << "\t" 
                       << queryEnd   << "\t" 
                       << refStart   << "\t"
                       << refEnd     << "\n";
-        */
-        /*
+        
+        
             std::cout<< queryName  << "\t"
                      << refName    << "\t"
                      << bitScore   << "\t"
@@ -222,7 +315,8 @@ bool getBlastResult(std::string blastAlignFile, AlignVec &result)
                      << pValue     << "\t"
                      << unknown3   << "\t"
                      << "\n";
-        */
+        }
+		
         if( alignLen < 1000 )continue;
         
         if( result.size() == 0 )

@@ -22,6 +22,9 @@ struct alignInfo
     RangeVec refVec;
 };
 
+void caculateNA50(int argc, char** argv);
+void chimeraDetected(int argc, char** argv);
+
 int Cmp(const void *lhs, const void *rhs);
 
 bool getBlastResult(std::string blastAlignFile, AlignVec &result);

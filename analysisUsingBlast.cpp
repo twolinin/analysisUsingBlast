@@ -76,7 +76,7 @@ void chimeraDetected(int argc, char** argv)
 				
 				if( abs( pbDistance - refDistance ) > 10000 )
 				{
-					for(int j = 0 ; j < (*iter).contigVec.size() ; j++ )
+					/*for(int j = 0 ; j < (*iter).contigVec.size() ; j++ )
 					{
 						cout << (*iter).contig;
 						cout.width(13);
@@ -90,7 +90,8 @@ void chimeraDetected(int argc, char** argv)
 						cout.width(13);
 						cout << ( (positionArray[j][2] > positionArray[j][3]) ? "   <--" : "-->" );
 						cout << "\n";
-					}
+					}*/
+					cout << (*iter).contig;
 					cout << "\n";
 					break;
 				}
